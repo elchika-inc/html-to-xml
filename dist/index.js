@@ -1,5 +1,4 @@
 import * as cheerio from 'cheerio';
-import { ContentExtractor } from '@elchika-inc/shared';
 export class HtmlToXmlConverter {
     /**
      * Convert HTML content to XML format
@@ -18,8 +17,8 @@ export class HtmlToXmlConverter {
             xml += `  <title><![CDATA[${options.title}]]></title>\n`;
         }
         xml += '  <content>\n';
-        // Extract structured content using shared utility
-        const structured = ContentExtractor.extractStructuredContent($);
+        // Extract structured content using the same logic as JSON converter
+        const structured = this.extractStructuredContent($);
         // Add headings
         if (structured.headings.length > 0) {
             xml += '    <headings>\n';
@@ -67,5 +66,76 @@ export class HtmlToXmlConverter {
         xml += '  </content>\n';
         xml += '</document>';
         return xml;
+    }
+    /**
+     * Extract structured content from HTML (reuse logic from JSON converter)
+     */
+    static extractStructuredContent($) {
+        const headings = [];
+        const paragraphs = [];
+        const links = [];
+        const images = [];
+        const lists = [];
+        // Extract headings
+        $('h1, h2, h3, h4, h5, h6').each((_, element) => {
+            const $el = $(element);
+            const level = parseInt(element.tagName.substring(1));
+            const text = $el.text().trim();
+            if (text) {
+                headings.push({ level, text });
+            }
+        });
+        // Extract paragraphs
+        $('p').each((_, element) => {
+            const text = $(element).text().trim();
+            if (text) {
+                paragraphs.push(text);
+            }
+        });
+        // Extract links
+        $('a[href]').each((_, element) => {
+            const $el = $(element);
+            const href = $el.attr('href');
+            const text = $el.text().trim();
+            if (href && text) {
+                links.push({ text, url: href });
+            }
+        });
+        // Extract images
+        $('img[src]').each((_, element) => {
+            const $el = $(element);
+            const src = $el.attr('src');
+            const alt = $el.attr('alt') || '';
+            if (src) {
+                images.push({ alt, src });
+            }
+        });
+        // Extract unordered lists
+        $('ul').each((_, element) => {
+            const items = [];
+            $(element).find('li').each((_, li) => {
+                const text = $(li).text().trim();
+                if (text) {
+                    items.push(text);
+                }
+            });
+            if (items.length > 0) {
+                lists.push({ type: 'unordered', items });
+            }
+        });
+        // Extract ordered lists
+        $('ol').each((_, element) => {
+            const items = [];
+            $(element).find('li').each((_, li) => {
+                const text = $(li).text().trim();
+                if (text) {
+                    items.push(text);
+                }
+            });
+            if (items.length > 0) {
+                lists.push({ type: 'ordered', items });
+            }
+        });
+        return { headings, paragraphs, links, images, lists };
     }
 }
